@@ -1,16 +1,21 @@
+import "dotenv/config";
+import { PrismaMssql } from "@prisma/adapter-mssql";
 import { PrismaClient } from "@src/generated/prisma/client";
-//import { PrismaPg } from "@prisma/adapter-pg"
 import { env } from "process";
 
-//const adapter = new PrismaPg({ connectionString: env.DB_URL });
-declare global {
-  var prisma: PrismaClient | undefined;
-}
+const config = {
+	server: env.DB_SERVER,
+	port: env.DB_PORT,
+	database: env.DB_NAME,
+	user: env.DB_USER,
+	password: env.DB_KEY,
+	options: {
+		encrypt: true, // Use this if you're on Windows Azure
+		trustServerCertificate: true, // Use this if you're using self-signed certificates
+	},
+};
 
-const prisma = global.prisma || new PrismaClient({});
+const adapter = new PrismaMssql(config);
+const prisma = new PrismaClient({ adapter });
 
-if (process.env.NODE_ENV !== "production") {
-  global.prisma = prisma;
-}
-
-export default prisma;
+export { prisma };
