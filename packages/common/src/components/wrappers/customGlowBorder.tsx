@@ -39,7 +39,7 @@ const HollowGlowBorder: React.FC<HollowGlowBorderProps> = ({
 	children,
 	className = "",
 	glassClassName = "bg-slate-900/20 backdrop-blur-xl", // Default Glass
-	contentClassName = "p-6", // Default padding
+	contentClassName = "", // Default padding
 	borderBackground = "linear-gradient(to bottom right, #334155, #0f172a)",
 	borderWidth = 2,
 	glowColor = "255, 255, 255",
@@ -142,7 +142,7 @@ const HollowGlowBorder: React.FC<HollowGlowBorderProps> = ({
 			{/* --- LAYER 3: ACTUAL CONTENT (The Foreground) --- 
           Positioned relatively to ensure it sits on top.
       */}
-			<div className={`relative h-full w-full ${contentClassName}`}>{children}</div>
+			<div className={cn("relative h-full w-full", contentClassName)}>{children}</div>
 		</div>
 	);
 };

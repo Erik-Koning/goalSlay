@@ -15,7 +15,7 @@ export default function Page() {
 				<CustomGlowBorder
 					borderBackground="linear-gradient(to bottom right, #334155, #0f172a)"
 					glowColor="255, 255, 255"
-					borderWidth={2}
+					borderWidth={1}
 					borderGlowRadius={100}
 					innerGlowRadius={200}
 					innerGlowIntensity={0.2}
