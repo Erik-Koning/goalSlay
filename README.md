@@ -2,9 +2,7 @@
 
 🚀 A starter kit for building modern web applications with **Next.js 16**, **Better Auth**, **Prisma**, and **shadcn/ui**.
 
-🔗 **[Live Demo](https://auth.achour.dev/)**
-
-<a href="https://www.buymeacoffee.com/achour" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
+<a href="" target="_blank"><img src="" alt="Scotia Confluence TBD" style="height: 60px !important;width: 217px !important;" ></a>
 
 ## 📌 Features
 
@@ -24,7 +22,7 @@
 
 1. Clone the repository:
    ```sh
-   git clone https://github.com/Achour/nextjs-better-auth.git
+   git clone
    cd nextjs-better-auth
    ```
 2. Install dependencies:
@@ -56,6 +54,15 @@
 - Use `npx prisma studio` to manage your database visually.
 - Customize authentication using Better Auth settings.
 
+## DB
+
+- Azure SQL or PostgreSQL with provider config change
+- Prisma ORM for safe and typesafe and DX friendly Data Query and Mutations
+
+- Use `npx prisma db push` on DB changes
+- If you want to keep a history of your changes (recommended for production), you would use:
+- `npx prisma migrate dev --name init`
+
 ## 🛠️ Tech Stack
 
 - **Next.js 16** - React framework
@@ -64,7 +71,3 @@
 - **Tailwind CSS 4** - Utility-first CSS framework
 - **shadcn/ui** - UI components
 - **TypeScript** - Type safety
-
----
-
-Made with ❤️ by [Achour Meguenni](https://github.com/Achour)
