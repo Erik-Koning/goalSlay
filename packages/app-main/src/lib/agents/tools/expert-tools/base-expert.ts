@@ -1,4 +1,4 @@
-import { ChatOpenAI } from "@langchain/openai";
+import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { models } from "../../config/models";
 import type { ExpertId, ExpertReviewResult } from "../../types";
@@ -16,7 +16,7 @@ export interface ExpertToolOutput {
 }
 
 export abstract class BaseExpertTool {
-  protected model: ChatOpenAI;
+  protected model: BaseChatModel;
   protected expertId: ExpertId;
   protected systemPrompt: string;
 

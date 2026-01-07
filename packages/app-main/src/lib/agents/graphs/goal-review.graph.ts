@@ -18,13 +18,34 @@ import type {
 // Define the graph state
 const GoalReviewStateAnnotation = Annotation.Root({
   input: Annotation<GoalSetReviewInput>,
-  currentGoalIndex: Annotation<number>({ default: () => 0 }),
-  validationResults: Annotation<GoalValidationResult[]>({ default: () => [] }),
-  expertReviews: Annotation<Record<string, ExpertReviewResult[]>>({ default: () => ({}) }),
-  progressEstimates: Annotation<ProgressEstimate[]>({ default: () => [] }),
-  expertSummaries: Annotation<Record<string, string>>({ default: () => ({}) }),
-  output: Annotation<GoalSetReviewOutput | null>({ default: () => null }),
-  error: Annotation<string | null>({ default: () => null }),
+  currentGoalIndex: Annotation<number>({
+    value: (_, next) => next,
+    default: () => 0,
+  }),
+  validationResults: Annotation<GoalValidationResult[]>({
+    value: (_, next) => next,
+    default: () => [],
+  }),
+  expertReviews: Annotation<Record<string, ExpertReviewResult[]>>({
+    value: (_, next) => next,
+    default: () => ({}),
+  }),
+  progressEstimates: Annotation<ProgressEstimate[]>({
+    value: (_, next) => next,
+    default: () => [],
+  }),
+  expertSummaries: Annotation<Record<string, string>>({
+    value: (_, next) => next,
+    default: () => ({}),
+  }),
+  output: Annotation<GoalSetReviewOutput | null>({
+    value: (_, next) => next,
+    default: () => null,
+  }),
+  error: Annotation<string | null>({
+    value: (_, next) => next,
+    default: () => null,
+  }),
 });
 
 type GoalReviewState = typeof GoalReviewStateAnnotation.State;

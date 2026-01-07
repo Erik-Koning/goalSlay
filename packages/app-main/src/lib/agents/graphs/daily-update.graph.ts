@@ -5,9 +5,18 @@ import type { DailyUpdateInput, ExtractedActivityResult, DailyUpdateExtractionOu
 // Define the graph state
 const DailyUpdateStateAnnotation = Annotation.Root({
   input: Annotation<ExtractionInput>,
-  extractedActivities: Annotation<ExtractedActivityResult[]>({ default: () => [] }),
-  output: Annotation<DailyUpdateExtractionOutput | null>({ default: () => null }),
-  error: Annotation<string | null>({ default: () => null }),
+  extractedActivities: Annotation<ExtractedActivityResult[]>({
+    value: (_, next) => next,
+    default: () => [],
+  }),
+  output: Annotation<DailyUpdateExtractionOutput | null>({
+    value: (_, next) => next,
+    default: () => null,
+  }),
+  error: Annotation<string | null>({
+    value: (_, next) => next,
+    default: () => null,
+  }),
 });
 
 type DailyUpdateState = typeof DailyUpdateStateAnnotation.State;

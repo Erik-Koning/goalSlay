@@ -1,4 +1,5 @@
-import { ChatOpenAI } from "@langchain/openai";
+import { ChatOpenAI, AzureChatOpenAI } from "@langchain/openai";
+import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
 
 // LLM Provider configuration
 export type LLMProvider = "openai" | "azure";
@@ -22,14 +23,14 @@ function getLLMProvider(): LLMProvider {
 }
 
 // Create an OpenAI-compatible model instance
-export function createModel(config?: Partial<LLMConfig>): ChatOpenAI {
+export function createModel(config?: Partial<LLMConfig>): BaseChatModel {
   const provider = config?.provider ?? getLLMProvider();
   const temperature = config?.temperature ?? DEFAULT_TEMPERATURE;
   const maxTokens = config?.maxTokens ?? DEFAULT_MAX_TOKENS;
 
   if (provider === "azure") {
     // Azure OpenAI configuration
-    return new ChatOpenAI({
+    return new AzureChatOpenAI({
       azureOpenAIApiKey: process.env.AZURE_OPENAI_API_KEY,
       azureOpenAIApiInstanceName: process.env.AZURE_OPENAI_INSTANCE,
       azureOpenAIApiDeploymentName: process.env.AZURE_OPENAI_DEPLOYMENT,
@@ -42,7 +43,7 @@ export function createModel(config?: Partial<LLMConfig>): ChatOpenAI {
   // Direct OpenAI configuration (dev fallback)
   return new ChatOpenAI({
     openAIApiKey: process.env.OPENAI_API_KEY,
-    modelName: config?.model ?? "gpt-4o",
+    model: config?.model ?? "gpt-4o",
     temperature,
     maxTokens,
   });
