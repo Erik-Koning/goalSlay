@@ -4,14 +4,29 @@ import React, { useRef, useState, useEffect } from "react";
 interface HollowGlowBorderProps extends React.HTMLAttributes<HTMLDivElement> {
 	children: React.ReactNode;
 
-	/** CSS background for the border (colors/gradients). */
+	/** * The Static Border Pattern.
+	 * Accepts any CSS background value: solid colors, linear-gradients, conic-gradients, or images.
+	 * Example: "linear-gradient(to right, #444, #000)"
+	 */
 	borderBackground?: string;
 
 	/** Width of the border in pixels. */
 	borderWidth?: number;
 
-	/** RGB color for the active mouse glow. */
+	/** RGB color for the active mouse glow (e.g. "100, 200, 255"). */
 	glowColor?: string;
+
+	/** * How the mouse glow blends with the static border.
+	 * - "normal": The glow sits on top like a solid light (covers the border).
+	 * - "overlay" / "screen" / "soft-light": The glow mixes with the border pattern.
+	 * - "plus-lighter": Adds light values (neon effect).
+	 */
+	glowBlendMode?: React.CSSProperties["backgroundBlendMode"];
+
+	/** * Max opacity of the mouse glow center (0 to 1).
+	 * Set to < 1 if you want the border to show through the glow slightly.
+	 */
+	glowOpacity?: number;
 
 	/** Radius of the mouse spotlight on the border. */
 	borderGlowRadius?: number;
@@ -22,39 +37,35 @@ interface HollowGlowBorderProps extends React.HTMLAttributes<HTMLDivElement> {
 	/** Opacity of the inner glow (0 to 1). */
 	innerGlowIntensity?: number;
 
-	/** * Styles for the GLASS BACKGROUND (Sibling to content).
-	 * Apply bg colors with opacity here (e.g. "bg-slate-900/20 backdrop-blur-md").
-	 * Text inside will NOT be affected by opacity here.
-	 */
+	/** Styles for the GLASS BACKGROUND (Sibling to content). */
 	glassClassName?: string;
 
-	/**
-	 * Styles for the CONTENT container (Parent of children).
-	 * Use this for padding, flex alignment, etc.
-	 */
+	/** Styles for the CONTENT container. */
 	contentClassName?: string;
 }
 
 const HollowGlowBorder: React.FC<HollowGlowBorderProps> = ({
 	children,
 	className = "",
-	glassClassName = "bg-slate-900/20 backdrop-blur-xl", // Default Glass
-	contentClassName = "", // Default padding
+	glassClassName = "bg-slate-900/20 backdrop-blur-xl",
+	contentClassName = "",
+	// Default: A subtle dark gradient
 	borderBackground = "linear-gradient(to bottom right, #334155, #0f172a)",
 	borderWidth = 2,
 	glowColor = "255, 255, 255",
+	glowBlendMode = "normal", // Default to solid cover
+	glowOpacity = 1, // Default to full strength
 	borderGlowRadius = 300,
 	innerGlowRadius = 300,
 	innerGlowIntensity = 0.1,
 	...props
 }) => {
 	const containerRef = useRef<HTMLDivElement>(null);
-	const bgRef = useRef<HTMLDivElement>(null); // We measure radius from the bg layer now
+	const bgRef = useRef<HTMLDivElement>(null);
 
 	const [outerRadius, setOuterRadius] = useState<string>("0px");
 	const [mousePos, setMousePos] = useState({ x: -1000, y: -1000 });
 
-	// 1. Auto-Calculate Outer Radius based on the Glass Layer's radius
 	useEffect(() => {
 		if (!bgRef.current) return;
 		const updateRadius = () => {
@@ -68,7 +79,6 @@ const HollowGlowBorder: React.FC<HollowGlowBorderProps> = ({
 		return () => observer.disconnect();
 	}, [borderWidth, glassClassName]);
 
-	// 2. Mouse Tracking
 	useEffect(() => {
 		const handleMouseMove = (e: MouseEvent) => {
 			if (!containerRef.current) return;
@@ -89,20 +99,30 @@ const HollowGlowBorder: React.FC<HollowGlowBorderProps> = ({
 			}}
 			{...props}
 		>
-			{/* --- LAYER 1: HOLLOW BORDER (The Frame) --- */}
+			{/* --- LAYER 1: HOLLOW BORDER --- */}
 			<div
 				className="absolute inset-0 transition-opacity duration-300 ease-in-out"
 				style={{
 					borderRadius: outerRadius,
 					padding: borderWidth,
+
+					// 1. The Background Stack
 					background: `
+            /* Top Layer: The Dynamic Mouse Glow */
             radial-gradient(
               ${borderGlowRadius}px circle at ${mousePos.x}px ${mousePos.y}px, 
-              rgba(${glowColor}, 1), 
+              rgba(${glowColor}, ${glowOpacity}), 
               transparent 100%
             ),
+            /* Bottom Layer: The Static Border Pattern */
             ${borderBackground}
           `,
+
+					// 2. The Blend Mode Logic
+					// We specify the blend mode for [Layer 1], [Layer 2]
+					backgroundBlendMode: `${glowBlendMode}, normal`,
+
+					// 3. The Masking Logic (Hollow Center)
 					mask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
 					maskComposite: "exclude",
 					WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
@@ -110,21 +130,17 @@ const HollowGlowBorder: React.FC<HollowGlowBorderProps> = ({
 				}}
 			/>
 
-			{/* --- LAYER 2: GLASS BACKGROUND (The Window) --- 
-          This is a SIBLING to content. Opacity here does not affect text.
-      */}
+			{/* --- LAYER 2: GLASS BACKGROUND --- */}
 			<div
 				ref={bgRef}
 				className={`absolute inset-[${borderWidth}px] overflow-hidden rounded-xl ${glassClassName}`}
 				style={{
-					// We use absolute positioning to fill the inner area exactly
 					top: borderWidth,
 					left: borderWidth,
 					right: borderWidth,
 					bottom: borderWidth,
 				}}
 			>
-				{/* Inner Glow (Light Leak) - Lives inside the glass layer */}
 				<div
 					className="absolute inset-0 pointer-events-none mix-blend-hard-light"
 					style={{
@@ -139,9 +155,7 @@ const HollowGlowBorder: React.FC<HollowGlowBorderProps> = ({
 				/>
 			</div>
 
-			{/* --- LAYER 3: ACTUAL CONTENT (The Foreground) --- 
-          Positioned relatively to ensure it sits on top.
-      */}
+			{/* --- LAYER 3: ACTUAL CONTENT --- */}
 			<div className={cn("relative h-full w-full", contentClassName)}>{children}</div>
 		</div>
 	);

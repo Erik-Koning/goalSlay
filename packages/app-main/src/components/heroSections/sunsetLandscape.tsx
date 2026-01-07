@@ -18,6 +18,8 @@ interface FeatheredSceneProps {
   children?: React.ReactNode;
   /** Class name for the container */
   containerClassName?: string;
+  /** Class name for the content wrapper */
+  contentClassName?: string;
 }
 
 const FeatheredScene: React.FC<FeatheredSceneProps> = ({
@@ -26,6 +28,7 @@ const FeatheredScene: React.FC<FeatheredSceneProps> = ({
   backgroundColor = '#FFFDD0', // Default Cream
   featherWidth = '15%',
   containerClassName = '',
+  contentClassName = '',
   children
 }) => {
   
@@ -104,9 +107,12 @@ const FeatheredScene: React.FC<FeatheredSceneProps> = ({
         */}
         <motion.div 
           className={cn(
-            "z-20 px-4 py-8 transition-all duration-500",
-            "min-[801px]:absolute min-[801px]:right-[5%] min-[801px]:top-1/2 min-[801px]:-translate-y-1/2 min-[801px]:w-[30%] min-[801px]:text-left",
-            "max-[800px]:w-full max-[800px]:order-first max-[800px]:text-center"
+            "z-20 px-4 py-8 transition-all duration-500 max-w-full",
+            //if desktop
+            "min-[801px]:absolute min-[801px]:right-[5%] min-[801px]:top-1/2 min-[801px]:-translate-y-1/2 min-[801px]:w-[570px] min-[801px]:text-left",
+            //mobile
+            "max-[800px]:w-full max-[800px]:order-first max-[800px]:text-center",
+            contentClassName
           )}
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}

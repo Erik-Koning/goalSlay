@@ -8,7 +8,8 @@
 		"start": "pnpm --filter app start",
 		"lint": "pnpm -r lint",
 		"prisma:generate": "prisma generate --schema=packages/app-main/prisma/schema.prisma",
-		"prisma:push": "prisma db push --schema=packages/app-main/prisma/schema.prisma"
+		"prisma:push": "prisma db push --schema=packages/app-main/prisma/schema.prisma",
+		"prisma:seed": "cd packages/app-main && pnpm tsx prisma/seed.ts"
 	},
 	"devDependencies": {
 		"@prisma/client": "catalog:",
