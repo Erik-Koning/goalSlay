@@ -18,9 +18,11 @@ This file provides guidance to Claude Code for autonomous, high-quality developm
 - Never commit with failing tests
 
 ## Project Overview
-GoalSlay is a PNPM monorepo with two packages:
+Chat Assistant is a PNPM monorepo with the following packages:
 - **app-main**: Next.js 16 web application (React 19, App Router)
-- **common**: Shared TSX components, hooks, and utilities library
+- **common**: Shared TSX UI components, hooks, and utilities library
+- **database**: Shared Prisma schema and client (consumed by both TS and Python)
+- **python-backend**: FastAPI + LangGraph commuter assistant
 
 ## Commands Reference
 
@@ -34,8 +36,15 @@ pnpm typecheck              # Run TypeScript checks (if available)
 
 ### Database (Prisma)
 ```bash
-pnpm prisma:generate        # Generate Prisma client
+pnpm prisma:generate        # Generate Prisma client in packages/database
 pnpm prisma:push            # Push schema to database
+```
+
+### Python Backend
+```bash
+pnpm python:install         # Install Python dependencies (uses uv)
+pnpm python:dev             # Start FastAPI dev server on port 8000
+pnpm generate:types         # Generate TypeScript types from Python schemas
 ```
 
 ### Package Management
@@ -71,20 +80,32 @@ git log --oneline -10       # Review recent history
 
 ### File Structure
 ```
-goalSlay/
+chat-assistant/
 ├── packages/
 │   ├── app-main/                    # Next.js application
-│   │   ├── prisma/schema.prisma     # Database schema
 │   │   └── src/
 │   │       ├── app/                 # Routes and API
 │   │       ├── components/          # React components
 │   │       ├── lib/                 # Utilities, auth, stores
 │   │       └── hooks/               # Custom hooks
+│   ├── database/                    # Shared Prisma package
+│   │   ├── prisma/schema.prisma     # Single source of truth
+│   │   └── src/generated/           # Generated Prisma client
+│   ├── python-backend/              # FastAPI + LangGraph backend
+│   │   ├── pyproject.toml           # Python dependencies (uv)
+│   │   └── src/assistant/
+│   │       ├── main.py              # FastAPI entrypoint
+│   │       ├── agent/               # LangGraph agent
+│   │       ├── tools/               # Weather, commute, GO Train
+│   │       ├── api/                 # API routes
+│   │       └── schemas/             # Pydantic models
 │   └── common/                      # Shared library
 │       └── src/
 │           ├── components/ui/       # shadcn/ui components
 │           ├── hooks/               # 36+ custom hooks
 │           └── utils/               # 60+ utility files
+├── scripts/
+│   └── generate-types.ts            # Python → TypeScript types
 ├── Docs/
 ├── pnpm-workspace.yaml
 └── package.json
@@ -102,6 +123,7 @@ goalSlay/
 1. **Understand the request** - Apply best approach for what is asked, apply to files
 2. **Follow existing patterns** - Match the style of surrounding code
 3. **Make incremental changes** - Small, testable modifications
+5. **Break up complex code into sub components and other files, especially for reusable components**
 4. **Verify as you go** - Run tests/lint after significant changes
 5. **Document decisions** - Add comments for non-obvious code, and add about.md (s) in complex components
 6. **Commit with good messages**
@@ -191,6 +213,14 @@ docs(api): update endpoint documentation
 - Domain restricted to "koning.ca" in `lib/auth.ts`
 - `useUserStore` manages client-side session with 5-min cache
 - Email verification required on signup (Azure Communication Service)
+- **Dev Auth Bypass**: Set `AUTH_BYPASS_ENABLED=true` in .env to skip auth (dev only)
+
+## Python Backend Notes
+- Uses `uv` for fast Python dependency management
+- LangGraph `create_react_agent` for tool-calling agent
+- Tools: weather, commute time, GO Train schedules (mock data)
+- Memory: MemorySaver (in-memory, replace with Redis/Postgres for production)
+- Next.js proxies to Python via `/api/chat` route
 
 ## Common Package Usage
 The common package exports reusable components, hooks (36+), and utilities (60+). Import via `@common/*`. Key areas:

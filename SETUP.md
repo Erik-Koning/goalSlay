@@ -1,4 +1,4 @@
-# GoalSlay Setup Guide
+# Chat Assistant Monorepo Setup Guide
 
 ## Quick Start
 
@@ -12,7 +12,7 @@
 ```bash
 # Clone and install dependencies
 git clone <repo-url>
-cd goalSlay
+cd chat-assistant-monorepo
 pnpm install
 
 # Copy environment template
@@ -110,7 +110,7 @@ AZURE_OPENAI_API_VERSION="2024-02-15-preview"
 # Optionally add LangSmith for tracing
 LANGCHAIN_TRACING_V2="true"
 LANGCHAIN_API_KEY="lsv2_your_key"
-LANGCHAIN_PROJECT="goalslay-prod"
+LANGCHAIN_PROJECT="chat-assistant-prod"
 ```
 
 ### 3. Deploy Azure Functions (Progress Check Cron)

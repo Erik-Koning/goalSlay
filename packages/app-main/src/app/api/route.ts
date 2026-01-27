@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/src/lib/prisma";
+import { handleApiError } from "@/lib/api-error";
 
 export async function GET() {
-	const users = await prisma.user.findMany();
-	return NextResponse.json("ok");
+  try {
+    return NextResponse.json({
+      status: "ok",
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    return handleApiError(error, "api:GET");
+  }
 }

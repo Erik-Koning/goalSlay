@@ -24,7 +24,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/src/components/ui/sidebar";
-import { user } from "@/src/generated/prisma/client";
+import { user } from "@chat-assistant/database";
 import LogoutButton from "./auth/logout-button";
 
 export function NavUser({ user }: { user: user }) {

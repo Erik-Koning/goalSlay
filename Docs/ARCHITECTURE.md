@@ -4,10 +4,10 @@
 
 ### High-Level Overview
 
-GoalSlay is a goal-setting and tracking platform built as a PNPM monorepo with two packages:
+Chat Assistant is a commuter assistant platform built as a PNPM monorepo with multiple packages:
 
 ```
-goalSlay/
+chat-assistant-monorepo/
 ├── packages/
 │   ├── app-main/          # Next.js 16 application (React 19, App Router)
 │   └── common/            # Shared components, hooks, and utilities library
@@ -159,12 +159,24 @@ The system uses LangGraph to orchestrate multiple AI "experts" that review and p
 3. Use Zod schemas for validation
 4. Follow existing patterns for error handling
 
-### Shared Components
+### Package Responsibilities
 
-The `common` package provides reusable components via `@common/*` imports:
-- UI components (`@common/components/ui/*`)
-- Custom hooks (`@common/hooks/*`)
-- Utilities (`@common/utils/*`)
+#### `common` Package (Shared UI & Utilities)
+The `common` package is strictly for **UI components and general utilities** that can be shared across multiple apps/packages:
+- UI components (`@common/components/ui/*`) - shadcn/ui based components
+- Custom React hooks (`@common/hooks/*`) - 36+ reusable hooks
+- General utilities (`@common/utils/*`) - 60+ utility functions (string, date, validation)
+
+**Note**: Application-specific logic like authentication, rate limiting, and business rules should NOT go in `common`.
+
+#### `app-main` Package (Application Logic)
+Application-specific modules live in `app-main/src/lib/`:
+- `auth.ts` - Better Auth configuration
+- `authorization.ts` - `requireAuth()` function with role checking and rate limiting
+- `rate-limit/` - Upstash-based rate limiting for API endpoints
+- `agents/` - LangChain/LangGraph AI agent system
+- `prisma.ts` - Database client
+- `stores/` - Zustand state stores
 
 ## Technology Stack
 

@@ -25,7 +25,7 @@ interface FeatheredSceneProps {
 const FeatheredScene: React.FC<FeatheredSceneProps> = ({
   backgroundSrc,
   foregroundSrc,
-  backgroundColor = '#FFFDD0', // Default Cream
+  backgroundColor = '#fff7dc', // Default Cream
   featherWidth = '15%',
   containerClassName = '',
   contentClassName = '',

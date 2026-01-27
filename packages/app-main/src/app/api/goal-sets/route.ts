@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
 import { z } from "zod";
+import { requireAuth } from "@/lib/authorization";
+import { handleApiError } from "@/lib/api-error";
 
 const createGoalSetSchema = z.object({
   goals: z
@@ -21,18 +21,17 @@ const createGoalSetSchema = z.object({
  * GET /api/goal-sets - Get user's goal sets
  */
 export async function GET(request: Request) {
-  try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const authResult = await requireAuth();
+  if (!authResult.success) return authResult.response;
+  const { user } = authResult;
 
+  try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
 
     const goalSets = await prisma.userGoalSet.findMany({
       where: {
-        userId: session.user.id,
+        userId: user.id,
         ...(status && { status }),
       },
       include: {
@@ -49,11 +48,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ goalSets });
   } catch (error) {
-    console.error("Error fetching goal sets:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "goal-sets:GET");
   }
 }
 
@@ -61,12 +56,11 @@ export async function GET(request: Request) {
  * POST /api/goal-sets - Create a new goal set
  */
 export async function POST(request: Request) {
-  try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const authResult = await requireAuth();
+  if (!authResult.success) return authResult.response;
+  const { user } = authResult;
 
+  try {
     const body = await request.json();
     const validated = createGoalSetSchema.parse(body);
 
@@ -76,7 +70,7 @@ export async function POST(request: Request) {
 
     const goalSet = await prisma.userGoalSet.create({
       data: {
-        userId: session.user.id,
+        userId: user.id,
         status: "draft",
         startDate: validated.startDate,
         editableUntil,
@@ -97,16 +91,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json(goalSet, { status: 201 });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Validation failed", details: error.errors },
-        { status: 400 }
-      );
-    }
-    console.error("Error creating goal set:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "goal-sets:POST");
   }
 }

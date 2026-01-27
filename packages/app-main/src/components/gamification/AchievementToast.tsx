@@ -52,7 +52,7 @@ export function AchievementToast({
 
         {/* Content */}
         <div className="flex-1">
-          <p className="text-xs font-medium text-yellow-600 dark:text-yellow-400">
+          <p className="text-xs font-medium text-yellow-600">
             Achievement Unlocked!
           </p>
           <p className="font-bold">{achievement.name}</p>

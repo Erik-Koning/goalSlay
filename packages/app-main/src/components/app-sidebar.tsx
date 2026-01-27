@@ -35,7 +35,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/src/components/ui/sidebar";
-import { user } from "@/src/generated/prisma/client";
+import { user } from "@chat-assistant/database";
 
 const data = {
   navMain: [

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
 import { z } from "zod";
+import { requireAuth, Role } from "@/lib/authorization";
+import { handleApiError, apiError, ErrorCode } from "@/lib/api-error";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -18,21 +18,10 @@ const updateUserSchema = z.object({
  * GET /api/admin/users/[id] - Get user details (admin only)
  */
 export async function GET(request: Request, { params }: RouteParams) {
+  const authResult = await requireAuth({ permissions: { role: Role.ADMIN } });
+  if (!authResult.success) return authResult.response;
+
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const currentUser = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { role: true },
-    });
-
-    if (currentUser?.role !== "admin") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     const { id } = await params;
 
     const user = await prisma.user.findUnique({
@@ -66,16 +55,12 @@ export async function GET(request: Request, { params }: RouteParams) {
     });
 
     if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
+      return apiError("User not found", ErrorCode.NOT_FOUND, 404);
     }
 
     return NextResponse.json(user);
   } catch (error) {
-    console.error("Error fetching user:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "admin/users/[id]:GET");
   }
 }
 
@@ -83,21 +68,10 @@ export async function GET(request: Request, { params }: RouteParams) {
  * PUT /api/admin/users/[id] - Update user (admin only)
  */
 export async function PUT(request: Request, { params }: RouteParams) {
+  const authResult = await requireAuth({ permissions: { role: Role.ADMIN } });
+  if (!authResult.success) return authResult.response;
+
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const currentUser = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { role: true },
-    });
-
-    if (currentUser?.role !== "admin") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     const { id } = await params;
     const body = await request.json();
     const validated = updateUserSchema.parse(body);
@@ -109,16 +83,6 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
     return NextResponse.json(user);
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Validation failed", details: error.errors },
-        { status: 400 }
-      );
-    }
-    console.error("Error updating user:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "admin/users/[id]:PUT");
   }
 }

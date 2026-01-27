@@ -1,28 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { requireAuth, Role } from "@/lib/authorization";
+import { handleApiError } from "@/lib/api-error";
 
 /**
  * GET /api/export/team - Export team data as JSON or CSV (admin only)
  */
 export async function GET(request: Request) {
+  const authResult = await requireAuth({ permissions: { role: Role.ADMIN } });
+  if (!authResult.success) return authResult.response;
+
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Check admin role
-    const currentUser = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { role: true },
-    });
-
-    if (currentUser?.role !== "admin") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     const { searchParams } = new URL(request.url);
     const format = searchParams.get("format") || "json";
     const startDate = searchParams.get("startDate");
@@ -137,7 +125,7 @@ export async function GET(request: Request) {
       return new NextResponse(csv, {
         headers: {
           "Content-Type": "text/csv",
-          "Content-Disposition": `attachment; filename="goalslay-team-export-${
+          "Content-Disposition": `attachment; filename="chat-assistant-team-export-${
             new Date().toISOString().split("T")[0]
           }.csv"`,
         },
@@ -146,10 +134,6 @@ export async function GET(request: Request) {
 
     return NextResponse.json(exportData);
   } catch (error) {
-    console.error("Error exporting team data:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "export/team:GET");
   }
 }

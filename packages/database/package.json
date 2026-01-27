@@ -1,0 +1,32 @@
+{
+	"name": "@chat-assistant/database",
+	"version": "1.0.0",
+	"private": true,
+	"main": "./src/generated/index.js",
+	"types": "./src/generated/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./src/generated/index.d.ts",
+			"default": "./src/generated/index.js"
+		},
+		"./client": {
+			"types": "./src/generated/index.d.ts",
+			"default": "./src/generated/index.js"
+		}
+	},
+	"scripts": {
+		"generate": "prisma generate",
+		"db:push": "prisma db push"
+	},
+	"dependencies": {
+		"@prisma/client": "catalog:",
+		"@prisma/adapter-mssql": "^7.2.0",
+		"@prisma/client-runtime-utils": "7.2.0",
+		"dotenv": "^16.4.5"
+	},
+	"devDependencies": {
+		"prisma": "catalog:",
+		"tsx": "catalog:",
+		"typescript": "catalog:"
+	}
+}

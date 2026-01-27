@@ -1,5 +1,5 @@
 import { PrismaMssql } from "@prisma/adapter-mssql";
-import { PrismaClient } from "@/src/generated/prisma/client";
+import { PrismaClient } from "@chat-assistant/database";
 import { env } from "process";
 
 const config = {

@@ -1,21 +1,28 @@
 {
-	"name": "goalslay-monorepo",
+	"name": "chat-assistant-monorepo",
 	"version": "1.0.0",
 	"private": true,
 	"scripts": {
 		"dev": "pnpm --filter app dev",
+		"dev:all": "pnpm generate:types && concurrently -n next,python -c blue,green \"pnpm dev\" \"pnpm python:dev\"",
 		"build": "pnpm --filter app build",
 		"start": "pnpm --filter app start",
 		"lint": "pnpm -r lint",
-		"prisma:generate": "prisma generate --schema=packages/app-main/prisma/schema.prisma",
-		"prisma:push": "prisma db push --schema=packages/app-main/prisma/schema.prisma",
-		"prisma:seed": "cd packages/app-main && pnpm tsx prisma/seed.ts"
+		"prisma:generate": "pnpm --filter @chat-assistant/database generate",
+		"prisma:push": "pnpm --filter @chat-assistant/database db:push",
+		"prisma:seed": "cd packages/database && pnpm tsx prisma/seed.ts",
+		"python:dev": "cd packages/python-backend/src && dotenv -e ../../../.env -v PYTHONPATH=. -- uv run uvicorn assistant.main:app --reload --port 8000",
+		"python:install": "cd packages/python-backend && uv sync",
+		"generate:types": "tsx scripts/generate-types.ts"
 	},
 	"devDependencies": {
 		"@prisma/client": "catalog:",
 		"prisma": "catalog:",
+		"concurrently": "^9.1.2",
 		"dotenv": "^16.4.7",
 		"dotenv-cli": "latest",
+		"tailwindcss": "catalog:",
+		"tw-animate-css": "^1.2.4",
 		"tsx": "catalog:",
 		"typescript": "catalog:"
 	}

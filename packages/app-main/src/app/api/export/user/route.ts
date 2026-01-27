@@ -1,24 +1,23 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { requireAuth } from "@/lib/authorization";
+import { handleApiError } from "@/lib/api-error";
 
 /**
  * GET /api/export/user - Export user's own data as JSON
  */
 export async function GET(request: Request) {
-  try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const authResult = await requireAuth();
+  if (!authResult.success) return authResult.response;
+  const { user } = authResult;
 
+  try {
     const { searchParams } = new URL(request.url);
     const format = searchParams.get("format") || "json";
 
     // Get all user data
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+    const userData = await prisma.user.findUnique({
+      where: { id: user.id },
       select: {
         id: true,
         name: true,
@@ -33,7 +32,7 @@ export async function GET(request: Request) {
     });
 
     const goalSets = await prisma.userGoalSet.findMany({
-      where: { userId: session.user.id },
+      where: { userId: user.id },
       include: {
         goals: {
           include: {
@@ -46,7 +45,7 @@ export async function GET(request: Request) {
     });
 
     const dailyUpdates = await prisma.dailyUpdate.findMany({
-      where: { userId: session.user.id },
+      where: { userId: user.id },
       include: {
         extractedActivities: true,
       },
@@ -54,7 +53,7 @@ export async function GET(request: Request) {
     });
 
     const achievements = await prisma.userAchievement.findMany({
-      where: { userId: session.user.id },
+      where: { userId: user.id },
       include: {
         achievement: true,
       },
@@ -62,7 +61,7 @@ export async function GET(request: Request) {
 
     const exportData = {
       exportedAt: new Date().toISOString(),
-      user,
+      user: userData,
       goalSets,
       dailyUpdates,
       achievements,
@@ -81,7 +80,14 @@ export async function GET(request: Request) {
     if (format === "csv") {
       // Generate CSV for goals
       const csvRows = [
-        ["Goal Set ID", "Goal Order", "Goal Text", "Status", "Start Date", "Created At"],
+        [
+          "Goal Set ID",
+          "Goal Order",
+          "Goal Text",
+          "Status",
+          "Start Date",
+          "Created At",
+        ],
       ];
 
       for (const goalSet of goalSets) {
@@ -102,7 +108,7 @@ export async function GET(request: Request) {
       return new NextResponse(csv, {
         headers: {
           "Content-Type": "text/csv",
-          "Content-Disposition": `attachment; filename="goalslay-export-${
+          "Content-Disposition": `attachment; filename="chat-assistant-export-${
             new Date().toISOString().split("T")[0]
           }.csv"`,
         },
@@ -111,10 +117,6 @@ export async function GET(request: Request) {
 
     return NextResponse.json(exportData);
   } catch (error) {
-    console.error("Error exporting user data:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "export/user:GET");
   }
 }

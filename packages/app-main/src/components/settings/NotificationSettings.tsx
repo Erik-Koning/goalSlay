@@ -7,7 +7,7 @@ import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
 import { Switch } from "@/src/components/ui/switch";
 import { Slider } from "@/src/components/ui/slider";
-import { LipNotice, useLipNotice } from "@/src/components/goals/LipNotice";
+import { toast } from "sonner";
 import { IconBell, IconLoader2 } from "@tabler/icons-react";
 
 interface Settings {
@@ -26,7 +26,6 @@ export function NotificationSettings({ className }: NotificationSettingsProps) {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const { notice, showSuccess, showError, hideNotice } = useLipNotice();
 
   useEffect(() => {
     async function fetchSettings() {
@@ -56,13 +55,13 @@ export function NotificationSettings({ className }: NotificationSettingsProps) {
 
       if (!response.ok) throw new Error("Failed to save");
 
-      showSuccess("Settings saved successfully!");
+      toast.success("Settings saved successfully!");
     } catch {
-      showError("Failed to save settings");
+      toast.error("Failed to save settings");
     } finally {
       setIsSaving(false);
     }
-  }, [settings, showSuccess, showError]);
+  }, [settings]);
 
   const updateSetting = <K extends keyof Settings>(key: K, value: Settings[K]) => {
     setSettings((prev) => (prev ? { ...prev, [key]: value } : null));
@@ -175,14 +174,6 @@ export function NotificationSettings({ className }: NotificationSettingsProps) {
         </Button>
       </div>
 
-      {/* Feedback */}
-      <LipNotice
-        type={notice.type}
-        message={notice.message}
-        show={notice.show}
-        onDismiss={hideNotice}
-        autoHide
-      />
     </div>
   );
 }

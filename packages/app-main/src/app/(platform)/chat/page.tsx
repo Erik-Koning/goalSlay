@@ -1,0 +1,14 @@
+import { ChatInterface } from "@/components/chat/ChatInterface";
+
+export const metadata = {
+  title: "Chat | Chat Assistant",
+  description: "Chat with the AI assistant",
+};
+
+export default function ChatPage() {
+  return (
+    <div className="h-[calc(100vh-80px)]">
+      <ChatInterface className="h-full" />
+    </div>
+  );
+}
