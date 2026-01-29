@@ -123,6 +123,8 @@ export async function PUT(request: Request, { params }: RouteParams) {
       await prisma.goal.createMany({
         data: validated.goals.map((goal) => ({
           userGoalSetId: id,
+          title: goal.goalText.substring(0, 255), // Use goalText as title
+          description: goal.goalText, // Use goalText as description
           goalText: goal.goalText,
           goalOrder: goal.goalOrder,
           validationStatus: "pending",

@@ -106,7 +106,7 @@ export async function POST(request: Request) {
             userId: goalSet.user.id,
             email: goalSet.user.email,
             type: "progress_warning",
-            message: `You're at ${Math.round(progressPercent)}% of expected progress for "${goal.goalText.slice(0, 50)}..."`,
+            message: `You're at ${Math.round(progressPercent)}% of expected progress for "${(goal.goalText ?? goal.title ?? "your goal").slice(0, 50)}..."`,
           });
         }
       }

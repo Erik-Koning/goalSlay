@@ -76,6 +76,8 @@ export async function POST(request: Request) {
         editableUntil,
         goals: {
           create: validated.goals.map((goal) => ({
+            title: goal.goalText.substring(0, 255), // Use goalText as title
+            description: goal.goalText, // Use goalText as description
             goalText: goal.goalText,
             goalOrder: goal.goalOrder,
             validationStatus: "pending",

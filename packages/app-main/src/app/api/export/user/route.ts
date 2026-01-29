@@ -94,8 +94,8 @@ export async function GET(request: Request) {
         for (const goal of goalSet.goals) {
           csvRows.push([
             goalSet.id,
-            goal.goalOrder.toString(),
-            `"${goal.goalText.replace(/"/g, '""')}"`,
+            (goal.goalOrder ?? 0).toString(),
+            `"${(goal.goalText ?? goal.description ?? "").replace(/"/g, '""')}"`,
             goal.validationStatus,
             goalSet.startDate.toISOString().split("T")[0],
             goalSet.createdAt.toISOString(),

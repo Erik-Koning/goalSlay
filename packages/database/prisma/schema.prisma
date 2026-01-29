@@ -87,6 +87,8 @@ model user {
   userAchievements    UserAchievement[]
   notificationSettings NotificationSettings?
   adminSettings       AdminSettings[]
+  goals               Goal[]               @relation("UserGoals")
+  goalUpdates         GoalUpdate[]
 
   @@map("users")
 }
@@ -156,27 +158,44 @@ model UserGoalSet {
 // ============================================
 
 model Goal {
-  id            String @id @default(cuid())
-  userGoalSetId String @map("user_goal_set_id")
-  goalText      String @map("goal_text") @db.Text
-  goalOrder     Int    @map("goal_order") // 1-5
+  id            String  @id @default(cuid())
+  userGoalSetId String? @map("user_goal_set_id") // Optional for standalone goals
+  userId        String? @map("user_id") // Direct user relation for standalone goals
+
+  // Core goal fields
+  title       String  @db.VarChar(255)
+  description String  @db.Text
+  goalText    String? @map("goal_text") @db.Text // Legacy field
+  goalOrder   Int?    @map("goal_order") // 1-5, optional for standalone goals
+
+  // Status: "active" | "completed" | "paused" | "draft"
+  status     String    @default("active") @db.VarChar(50)
+  targetDate DateTime? @map("target_date")
 
   // ValidationStatus: "pending" | "valid" | "warning" | "rejected"
   validationStatus   String  @default("pending") @map("validation_status") @db.VarChar(50)
   validationFeedback String? @map("validation_feedback") @db.Text
   expertSummary      String? @map("expert_summary") @db.Text // Orchestrator's aggregated summary
 
+  // Council review
+  councilScore      Decimal? @map("council_score") @db.Decimal(3, 1) // Overall score 0-10
+  councilReviewedAt DateTime? @map("council_reviewed_at")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  userGoalSet       UserGoalSet            @relation(fields: [userGoalSetId], references: [id], onDelete: Cascade)
+  user              user?                  @relation("UserGoals", fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  userGoalSet       UserGoalSet?           @relation(fields: [userGoalSetId], references: [id], onDelete: Cascade)
   progressEstimates GoalProgressEstimate[]
   expertReviews     ExpertReview[]
   expertSelections  GoalExpertSelection[]
   linkedActivities  ExtractedActivity[]
+  goalUpdates       GoalUpdate[]
 
   @@index([userGoalSetId])
+  @@index([userId])
+  @@index([status])
   @@map("goals")
 }
 
@@ -212,10 +231,15 @@ model GoalProgressEstimate {
 model ExpertReview {
   id            String @id @default(cuid())
   goalId        String @map("goal_id")
-  expertId      String @map("expert_id") @db.VarChar(50) // e.g., 'progress_tracker'
+  expertId      String @map("expert_id") @db.VarChar(50) // e.g., 'progress_tracker', 'strategist'
   expertName    String @map("expert_name") @db.VarChar(100)
   reviewContent String @map("review_content") @db.Text
   actionItems   String? @map("action_items") @db.Text // JSON array of suggested actions
+
+  // Expert scoring
+  score      Int?    // 1-10 rating from this expert
+  feedback   String? @db.Text // Detailed feedback text
+  suggestions String? @db.Text // JSON array of actionable suggestions
 
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -223,6 +247,32 @@ model ExpertReview {
   goal Goal @relation(fields: [goalId], references: [id], onDelete: Cascade)
 
   @@map("expert_reviews")
+}
+
+// ============================================
+// GOAL UPDATE (user progress updates with LLM parsing)
+// ============================================
+
+model GoalUpdate {
+  id         String @id @default(cuid())
+  goalId     String @map("goal_id")
+  userId     String @map("user_id")
+  rawText    String @map("raw_text") @db.Text // Free-form user input
+  parsedData String? @map("parsed_data") @db.Text // JSON: Structured activities parsed by LLM
+
+  // Parsed metadata
+  sentiment      String? @db.VarChar(50) // positive, neutral, negative
+  momentumScore  Int?    @map("momentum_score") // 1-10
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  goal Goal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  user user @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([goalId])
+  @@index([userId])
+  @@map("goal_updates")
 }
 
 // ============================================
