@@ -1,18 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { requireAuth } from "@/lib/authorization";
+import { handleApiError } from "@/lib/api-error";
 
 /**
  * GET /api/leaderboard - Get leaderboard data
  */
 export async function GET(request: Request) {
-  try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const authResult = await requireAuth();
+  if (!authResult.success) return authResult.response;
+  const { user } = authResult;
 
+  try {
     const { searchParams } = new URL(request.url);
     const type = searchParams.get("type") || "points"; // points, streak, achievements
     const limit = parseInt(searchParams.get("limit") || "10");
@@ -48,7 +47,9 @@ export async function GET(request: Request) {
           select: { id: true, name: true, image: true },
         });
 
-        const achievementUserMap = new Map(achievementUsers.map((u) => [u.id, u]));
+        const achievementUserMap = new Map(
+          achievementUsers.map((u) => [u.id, u])
+        );
 
         leaderboard = achievementCounts.map((ac) => ({
           ...achievementUserMap.get(ac.userId),
@@ -73,7 +74,7 @@ export async function GET(request: Request) {
     }
 
     // Get current user's rank
-    const currentUserRank = await getUserRank(session.user.id, type);
+    const currentUserRank = await getUserRank(user.id, type);
 
     return NextResponse.json({
       leaderboard,
@@ -81,11 +82,7 @@ export async function GET(request: Request) {
       type,
     });
   } catch (error) {
-    console.error("Error fetching leaderboard:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "leaderboard:GET");
   }
 }
 

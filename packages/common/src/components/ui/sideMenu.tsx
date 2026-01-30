@@ -36,7 +36,7 @@ import { TooltipWrapper } from "@common/components/ui/TooltipWrapper";
 import { execPath } from "process";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
-import { LineSpacer } from "../../../../common/src/components/ui/LineSpacer";
+import { LineSpacer } from "./LineSpacer";
 import { RefreshWindow, navigateToPath } from "@common/utils/DOM";
 import { useUserUnengaged } from "@common/hooks/useUserUnengage";
 import { isTestDevOrSuperAppAdmin, isTestEnv, isTestOrDevEnv } from "@common/utils/environments";

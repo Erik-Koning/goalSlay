@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
 import { z } from "zod";
+import { requireAuth } from "@/lib/authorization";
+import { handleApiError, apiError, ErrorCode } from "@/lib/api-error";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -20,25 +20,33 @@ const updateGoalSetSchema = z.object({
     .min(3)
     .max(5)
     .optional(),
-  status: z.enum(["draft", "pending_review", "pending_approval", "active", "completed", "abandoned"]).optional(),
+  status: z
+    .enum([
+      "draft",
+      "pending_review",
+      "pending_approval",
+      "active",
+      "completed",
+      "abandoned",
+    ])
+    .optional(),
 });
 
 /**
  * GET /api/goal-sets/[id] - Get a specific goal set
  */
 export async function GET(request: Request, { params }: RouteParams) {
-  try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const authResult = await requireAuth();
+  if (!authResult.success) return authResult.response;
+  const { user } = authResult;
 
+  try {
     const { id } = await params;
 
     const goalSet = await prisma.userGoalSet.findFirst({
       where: {
         id,
-        userId: session.user.id,
+        userId: user.id,
       },
       include: {
         goals: {
@@ -57,16 +65,12 @@ export async function GET(request: Request, { params }: RouteParams) {
     });
 
     if (!goalSet) {
-      return NextResponse.json({ error: "Goal set not found" }, { status: 404 });
+      return apiError("Goal set not found", ErrorCode.NOT_FOUND, 404);
     }
 
     return NextResponse.json(goalSet);
   } catch (error) {
-    console.error("Error fetching goal set:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "goal-sets/[id]:GET");
   }
 }
 
@@ -74,31 +78,35 @@ export async function GET(request: Request, { params }: RouteParams) {
  * PUT /api/goal-sets/[id] - Update a goal set
  */
 export async function PUT(request: Request, { params }: RouteParams) {
-  try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const authResult = await requireAuth();
+  if (!authResult.success) return authResult.response;
+  const { user } = authResult;
 
+  try {
     const { id } = await params;
 
     // Check ownership and editable status
     const existingGoalSet = await prisma.userGoalSet.findFirst({
       where: {
         id,
-        userId: session.user.id,
+        userId: user.id,
       },
     });
 
     if (!existingGoalSet) {
-      return NextResponse.json({ error: "Goal set not found" }, { status: 404 });
+      return apiError("Goal set not found", ErrorCode.NOT_FOUND, 404);
     }
 
     // Check if still in editable window
-    if (existingGoalSet.editableUntil && new Date() > existingGoalSet.editableUntil) {
-      return NextResponse.json(
-        { error: "Goal set is no longer editable" },
-        { status: 403 }
+    if (
+      existingGoalSet.editableUntil &&
+      new Date() > existingGoalSet.editableUntil
+    ) {
+      return apiError(
+        "Goal set is no longer editable",
+        ErrorCode.FORBIDDEN,
+        403,
+        { editableUntil: existingGoalSet.editableUntil }
       );
     }
 
@@ -115,6 +123,8 @@ export async function PUT(request: Request, { params }: RouteParams) {
       await prisma.goal.createMany({
         data: validated.goals.map((goal) => ({
           userGoalSetId: id,
+          title: goal.goalText.substring(0, 255), // Use goalText as title
+          description: goal.goalText, // Use goalText as description
           goalText: goal.goalText,
           goalOrder: goal.goalOrder,
           validationStatus: "pending",
@@ -142,17 +152,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
     return NextResponse.json(updatedGoalSet);
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Validation failed", details: error.errors },
-        { status: 400 }
-      );
-    }
-    console.error("Error updating goal set:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "goal-sets/[id]:PUT");
   }
 }
 
@@ -160,30 +160,31 @@ export async function PUT(request: Request, { params }: RouteParams) {
  * DELETE /api/goal-sets/[id] - Delete a goal set
  */
 export async function DELETE(request: Request, { params }: RouteParams) {
-  try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const authResult = await requireAuth();
+  if (!authResult.success) return authResult.response;
+  const { user } = authResult;
 
+  try {
     const { id } = await params;
 
     const goalSet = await prisma.userGoalSet.findFirst({
       where: {
         id,
-        userId: session.user.id,
+        userId: user.id,
       },
     });
 
     if (!goalSet) {
-      return NextResponse.json({ error: "Goal set not found" }, { status: 404 });
+      return apiError("Goal set not found", ErrorCode.NOT_FOUND, 404);
     }
 
     // Only allow deletion of draft goal sets
     if (goalSet.status !== "draft") {
-      return NextResponse.json(
-        { error: "Can only delete draft goal sets" },
-        { status: 403 }
+      return apiError(
+        "Can only delete draft goal sets",
+        ErrorCode.FORBIDDEN,
+        403,
+        { currentStatus: goalSet.status }
       );
     }
 
@@ -193,10 +194,6 @@ export async function DELETE(request: Request, { params }: RouteParams) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting goal set:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "goal-sets/[id]:DELETE");
   }
 }

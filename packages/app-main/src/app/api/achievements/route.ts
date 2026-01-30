@@ -1,18 +1,17 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
+import { requireAuth } from "@/lib/authorization";
+import { handleApiError } from "@/lib/api-error";
 
 /**
  * GET /api/achievements - Get all achievements and user's earned ones
  */
 export async function GET() {
-  try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const authResult = await requireAuth();
+  if (!authResult.success) return authResult.response;
+  const { user } = authResult;
 
+  try {
     // Get all active achievements
     const achievements = await prisma.achievement.findMany({
       where: { isActive: true },
@@ -21,7 +20,7 @@ export async function GET() {
 
     // Get user's earned achievements
     const userAchievements = await prisma.userAchievement.findMany({
-      where: { userId: session.user.id },
+      where: { userId: user.id },
       select: { achievementId: true, earnedAt: true },
     });
 
@@ -38,8 +37,8 @@ export async function GET() {
     }));
 
     // Get user stats
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
       select: {
         streakCurrent: true,
         streakLongest: true,
@@ -50,19 +49,15 @@ export async function GET() {
     return NextResponse.json({
       achievements: achievementsWithStatus,
       stats: {
-        currentStreak: user?.streakCurrent || 0,
-        longestStreak: user?.streakLongest || 0,
-        totalPoints: user?.totalPoints || 0,
+        currentStreak: dbUser?.streakCurrent || 0,
+        longestStreak: dbUser?.streakLongest || 0,
+        totalPoints: dbUser?.totalPoints || 0,
         achievementsEarned: userAchievements.length,
         achievementsTotal: achievements.length,
       },
     });
   } catch (error) {
-    console.error("Error fetching achievements:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "achievements:GET");
   }
 }
 
@@ -70,21 +65,15 @@ export async function GET() {
  * POST /api/achievements/check - Check and award any earned achievements
  */
 export async function POST() {
+  const authResult = await requireAuth();
+  if (!authResult.success) return authResult.response;
+  const { user } = authResult;
+
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const newlyEarned = await checkAndAwardAchievements(session.user.id);
-
+    const newlyEarned = await checkAndAwardAchievements(user.id);
     return NextResponse.json({ newlyEarned });
   } catch (error) {
-    console.error("Error checking achievements:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "achievements:POST");
   }
 }
 
@@ -148,7 +137,9 @@ async function checkAndAwardAchievements(userId: string) {
 
     switch (criteria.type) {
       case "streak":
-        earned = user.streakCurrent >= criteria.days || user.streakLongest >= criteria.days;
+        earned =
+          user.streakCurrent >= criteria.days ||
+          user.streakLongest >= criteria.days;
         break;
       case "goals_completed":
         earned = completedGoals >= criteria.count;

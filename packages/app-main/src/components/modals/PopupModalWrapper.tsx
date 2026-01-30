@@ -10,10 +10,10 @@ interface PopupModalWrapperProps {
 
 export const PopupModalWrapper = forwardRef<HTMLDivElement, PopupModalWrapperProps>(
   ({ className }, ref) => {
-    const { 
-      modalOpen, 
-      modalMessages, 
-      setModalOpen, 
+    const {
+      modalOpen,
+      modalMessages,
+      setModalOpen,
       removeModalMessage,
       setTriggerUIEvent,
     } = useModalStore();
@@ -48,15 +48,15 @@ export const PopupModalWrapper = forwardRef<HTMLDivElement, PopupModalWrapperPro
         ref={ref}
         className={`fixed inset-0 z-50 flex items-center justify-center ${className || ""}`}
       >
-        {/* Overlay */}
+        {/* Overlay with blur */}
         <div
-          className={`absolute inset-0 bg-black/50 ${currentMessage.modalOverlayClassName || ""}`}
+          className={`absolute inset-0 bg-black/20 backdrop-blur-sm ${currentMessage.modalOverlayClassName || ""}`}
           onClick={() => handleClose(currentMessage)}
         />
 
-        {/* Modal */}
+        {/* Modal with glass effect */}
         <div
-          className={`relative z-10 w-full max-w-md rounded-xl bg-white p-6 shadow-2xl dark:bg-slate-800 ${currentMessage.className || ""}`}
+          className={`relative z-10 w-full max-w-md rounded-2xl p-6 shadow-2xl ${currentMessage.className || ""} bg-white/80 dark:bg-slate-800/80 backdrop-blur-xl border border-white/30 dark:border-slate-700/30`}
         >
           {/* Header */}
           <div className="mb-4">
@@ -84,13 +84,13 @@ export const PopupModalWrapper = forwardRef<HTMLDivElement, PopupModalWrapperPro
           <div className="flex justify-end gap-3">
             <button
               onClick={() => handleClose(currentMessage)}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-700"
+              className="rounded-lg px-4 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100/50 dark:hover:bg-slate-700/50 backdrop-blur-sm transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={() => handleConfirm(currentMessage)}
-              className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600"
+              className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 shadow-sm hover:shadow-md transition-all"
             >
               Confirm
             </button>

@@ -2,7 +2,7 @@ node_modules
 .env
 .DS_Store
 .cursorrules
-.vscode
+
 .cursor
 .idea
 .pytest_cache

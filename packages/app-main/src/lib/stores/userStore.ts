@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { create } from "zustand";
 import { authClient } from "../auth-client";
 
@@ -109,9 +110,9 @@ export const useUserStore = create<UserState>((set, get) => ({
 
 // Hook to initialize user on app load
 export const useInitializeUser = () => {
-  const { fetchUser, isLoading } = useUserStore();
+  const fetchUser = useUserStore((state) => state.fetchUser);
 
-  if (typeof window !== "undefined" && isLoading) {
+  useEffect(() => {
     fetchUser();
-  }
+  }, [fetchUser]);
 };

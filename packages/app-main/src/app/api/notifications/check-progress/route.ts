@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { handleApiError, apiError, ErrorCode } from "@/lib/api-error";
 
 /**
  * POST /api/notifications/check-progress - Cron job to check progress and send notifications
@@ -12,7 +13,7 @@ export async function POST(request: Request) {
     const cronSecret = process.env.CRON_SECRET;
 
     if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return apiError("Invalid cron authorization", ErrorCode.UNAUTHORIZED, 401);
     }
 
     const today = new Date();
@@ -105,7 +106,7 @@ export async function POST(request: Request) {
             userId: goalSet.user.id,
             email: goalSet.user.email,
             type: "progress_warning",
-            message: `You're at ${Math.round(progressPercent)}% of expected progress for "${goal.goalText.slice(0, 50)}..."`,
+            message: `You're at ${Math.round(progressPercent)}% of expected progress for "${(goal.goalText ?? goal.title ?? "your goal").slice(0, 50)}..."`,
           });
         }
       }
@@ -121,10 +122,6 @@ export async function POST(request: Request) {
       notifications: process.env.NODE_ENV === "development" ? notifications : undefined,
     });
   } catch (error) {
-    console.error("Error checking progress:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "notifications/check-progress:POST");
   }
 }

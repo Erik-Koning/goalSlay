@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
 import { z } from "zod";
+import { requireAuth } from "@/lib/authorization";
+import { handleApiError, apiError, ErrorCode } from "@/lib/api-error";
 
 const createUpdateSchema = z.object({
   goalSetId: z.string(),
@@ -15,12 +15,11 @@ const createUpdateSchema = z.object({
  * GET /api/daily-updates - Get user's daily updates
  */
 export async function GET(request: Request) {
-  try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const authResult = await requireAuth();
+  if (!authResult.success) return authResult.response;
+  const { user } = authResult;
 
+  try {
     const { searchParams } = new URL(request.url);
     const goalSetId = searchParams.get("goalSetId");
     const startDate = searchParams.get("startDate");
@@ -28,7 +27,7 @@ export async function GET(request: Request) {
 
     const updates = await prisma.dailyUpdate.findMany({
       where: {
-        userId: session.user.id,
+        userId: user.id,
         ...(goalSetId && { userGoalSetId: goalSetId }),
         ...(startDate &&
           endDate && {
@@ -50,11 +49,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ updates });
   } catch (error) {
-    console.error("Error fetching daily updates:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "daily-updates:GET");
   }
 }
 
@@ -62,12 +57,11 @@ export async function GET(request: Request) {
  * POST /api/daily-updates - Create a new daily update
  */
 export async function POST(request: Request) {
-  try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const authResult = await requireAuth();
+  if (!authResult.success) return authResult.response;
+  const { user } = authResult;
 
+  try {
     const body = await request.json();
     const validated = createUpdateSchema.parse(body);
 
@@ -75,18 +69,18 @@ export async function POST(request: Request) {
     const goalSet = await prisma.userGoalSet.findFirst({
       where: {
         id: validated.goalSetId,
-        userId: session.user.id,
+        userId: user.id,
       },
     });
 
     if (!goalSet) {
-      return NextResponse.json({ error: "Goal set not found" }, { status: 404 });
+      return apiError("Goal set not found", ErrorCode.NOT_FOUND, 404);
     }
 
     // Check for existing update in same period
     const existingUpdate = await prisma.dailyUpdate.findFirst({
       where: {
-        userId: session.user.id,
+        userId: user.id,
         userGoalSetId: validated.goalSetId,
         updatePeriod: validated.updatePeriod,
         periodDate: validated.periodDate,
@@ -94,15 +88,17 @@ export async function POST(request: Request) {
     });
 
     if (existingUpdate) {
-      return NextResponse.json(
-        { error: "Update already exists for this period" },
-        { status: 409 }
+      return apiError(
+        "Update already exists for this period",
+        ErrorCode.VALIDATION_ERROR,
+        409,
+        { period: validated.updatePeriod, date: validated.periodDate }
       );
     }
 
     const update = await prisma.dailyUpdate.create({
       data: {
-        userId: session.user.id,
+        userId: user.id,
         userGoalSetId: validated.goalSetId,
         updateText: validated.updateText,
         updatePeriod: validated.updatePeriod,
@@ -111,28 +107,22 @@ export async function POST(request: Request) {
     });
 
     // Update user streak
-    await updateStreak(session.user.id);
+    await updateStreak(user.id);
 
     return NextResponse.json(update, { status: 201 });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Validation failed", details: error.errors },
-        { status: 400 }
-      );
-    }
-    console.error("Error creating daily update:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "daily-updates:POST");
   }
 }
 
 async function updateStreak(userId: string) {
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { streakCurrent: true, streakLongest: true, streakLastUpdate: true },
+    select: {
+      streakCurrent: true,
+      streakLongest: true,
+      streakLastUpdate: true,
+    },
   });
 
   if (!user) return;

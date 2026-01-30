@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { retainSafeKeys } from "@/lib/utils";
+import { requireAuth } from "@/lib/authorization";
+import { handleApiError } from "@/lib/api-error";
 
 /**
- * API Route to fetch users with only safe columns returned.
- * Safe columns are specified by an array of keys.
+ * GET /api/users/getUserSafeColumns - Fetch users with only safe columns
  */
 export async function GET() {
+  const authResult = await requireAuth();
+  if (!authResult.success) return authResult.response;
+
   try {
     const users = await prisma.user.findMany();
 
@@ -27,10 +31,6 @@ export async function GET() {
 
     return NextResponse.json(safeUsers);
   } catch (error) {
-    console.error("Error fetching users:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "users:GET");
   }
 }

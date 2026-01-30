@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
 import { z } from "zod";
+import { requireAuth, Role } from "@/lib/authorization";
+import { handleApiError, apiError, ErrorCode } from "@/lib/api-error";
 
 const approveSchema = z.object({
   goalSetId: z.string(),
@@ -14,21 +14,11 @@ const approveSchema = z.object({
  * POST /api/admin/approve - Approve or reject a goal set (admin only)
  */
 export async function POST(request: Request) {
+  const authResult = await requireAuth({ permissions: { role: Role.ADMIN } });
+  if (!authResult.success) return authResult.response;
+  const { user } = authResult;
+
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const currentUser = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { role: true },
-    });
-
-    if (currentUser?.role !== "admin") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     const body = await request.json();
     const validated = approveSchema.parse(body);
 
@@ -37,13 +27,15 @@ export async function POST(request: Request) {
     });
 
     if (!goalSet) {
-      return NextResponse.json({ error: "Goal set not found" }, { status: 404 });
+      return apiError("Goal set not found", ErrorCode.NOT_FOUND, 404);
     }
 
     if (goalSet.status !== "pending_approval") {
-      return NextResponse.json(
-        { error: "Goal set is not pending approval" },
-        { status: 400 }
+      return apiError(
+        "Goal set is not pending approval",
+        ErrorCode.BAD_REQUEST,
+        400,
+        { currentStatus: goalSet.status }
       );
     }
 
@@ -64,7 +56,7 @@ export async function POST(request: Request) {
       where: { id: validated.goalSetId },
       data: {
         status: newStatus,
-        approvedById: validated.action === "approve" ? session.user.id : null,
+        approvedById: validated.action === "approve" ? user.id : null,
         approvedAt: validated.action === "approve" ? new Date() : null,
         adminComment: validated.comment,
       },
@@ -72,17 +64,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(updatedGoalSet);
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: "Validation failed", details: error.errors },
-        { status: 400 }
-      );
-    }
-    console.error("Error approving goal set:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "admin/approve:POST");
   }
 }
 
@@ -90,21 +72,10 @@ export async function POST(request: Request) {
  * GET /api/admin/approve - Get pending approvals (admin only)
  */
 export async function GET() {
+  const authResult = await requireAuth({ permissions: { role: Role.ADMIN } });
+  if (!authResult.success) return authResult.response;
+
   try {
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const currentUser = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { role: true },
-    });
-
-    if (currentUser?.role !== "admin") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     const pendingGoalSets = await prisma.userGoalSet.findMany({
       where: { status: "pending_approval" },
       include: {
@@ -124,10 +95,6 @@ export async function GET() {
 
     return NextResponse.json({ pendingGoalSets });
   } catch (error) {
-    console.error("Error fetching pending approvals:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 }
-    );
+    return handleApiError(error, "admin/approve:GET");
   }
 }

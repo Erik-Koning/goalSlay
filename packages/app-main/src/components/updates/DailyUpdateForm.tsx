@@ -4,7 +4,7 @@ import { useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/src/components/ui/button";
 import { Textarea } from "@/src/components/ui/textarea";
-import { LipNotice, useLipNotice } from "@/src/components/goals/LipNotice";
+import { toast } from "sonner";
 import {
   IconSun,
   IconSunset,
@@ -46,17 +46,13 @@ export function DailyUpdateForm({ goalSetId, onSuccess, className }: DailyUpdate
   const [updateText, setUpdateText] = useState("");
   const [period, setPeriod] = useState<UpdatePeriod>(getCurrentPeriod());
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isExtracting, setIsExtracting] = useState(false);
-  const { notice, showLoading, showSuccess, showError, hideNotice } = useLipNotice();
 
   const handleSubmit = useCallback(async () => {
     if (!updateText.trim() || isSubmitting) return;
 
     setIsSubmitting(true);
-    showLoading("Submitting your update...");
 
     try {
-      // Create update
       const response = await fetch("/api/daily-updates", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -73,30 +69,17 @@ export function DailyUpdateForm({ goalSetId, onSuccess, className }: DailyUpdate
         throw new Error(error.error || "Failed to submit update");
       }
 
-      const update = await response.json();
-
-      // Extract activities
-      setIsExtracting(true);
-      showLoading("Extracting activities from your update...");
-
-      await fetch("/api/daily-updates/extract", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ updateId: update.id }),
-      });
-
-      showSuccess("Update submitted and activities extracted!");
+      toast.success("Update submitted successfully!");
       setUpdateText("");
       onSuccess?.();
     } catch (error) {
-      showError(error instanceof Error ? error.message : "Failed to submit update");
+      toast.error(error instanceof Error ? error.message : "Failed to submit update");
     } finally {
       setIsSubmitting(false);
-      setIsExtracting(false);
     }
-  }, [updateText, period, goalSetId, isSubmitting, showLoading, showSuccess, showError, onSuccess]);
+  }, [updateText, period, goalSetId, isSubmitting, onSuccess]);
 
-  const isLoading = isSubmitting || isExtracting;
+  const isLoading = isSubmitting;
 
   return (
     <div className={cn("space-y-4", className)}>
@@ -156,7 +139,7 @@ export function DailyUpdateForm({ goalSetId, onSuccess, className }: DailyUpdate
             {isLoading ? (
               <>
                 <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />
-                {isExtracting ? "Extracting..." : "Submitting..."}
+                Submitting...
               </>
             ) : (
               <>
@@ -167,16 +150,6 @@ export function DailyUpdateForm({ goalSetId, onSuccess, className }: DailyUpdate
           </Button>
         </div>
       </div>
-
-      {/* Feedback */}
-      <LipNotice
-        type={notice.type}
-        message={notice.message}
-        show={notice.show}
-        onDismiss={hideNotice}
-        autoHide
-        autoHideDelay={4000}
-      />
 
       {/* Tips */}
       <div className="rounded-lg border bg-muted/50 p-4">

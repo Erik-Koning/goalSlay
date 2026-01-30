@@ -80,6 +80,6 @@ export const auth = betterAuth({
 		},
 	},
 	database: prismaAdapter(prisma, {
-		provider: "sqlserver",
+		provider: "postgresql",
 	}),
 });
