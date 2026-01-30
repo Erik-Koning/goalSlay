@@ -1,4 +1,5 @@
-import { PrismaMssql } from "@prisma/adapter-mssql";
+import { Pool, PoolConfig } from "pg";
+import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated";
 import { config as loadEnv } from "dotenv";
 import { resolve } from "path";
@@ -6,19 +7,34 @@ import { resolve } from "path";
 // Load env from monorepo root
 loadEnv({ path: resolve(__dirname, "../../../.env") });
 
-const dbConfig = {
-  server: process.env.DB_SERVER,
-  port: Number(process.env.DB_PORT) || 1433,
-  database: process.env.DB_NAME,
-  user: process.env.DB_USER,
-  password: process.env.DB_KEY,
-  options: {
-    encrypt: true,
-    trustServerCertificate: false,
-  },
+// Toggle between PgBouncer (port 6432) and direct PostgreSQL (port 5432)
+// Set USE_PGBOUNCER=true in .env to enable PgBouncer mode
+const usePgBouncer = process.env.USE_PGBOUNCER === "true";
+const defaultPort = usePgBouncer ? "6432" : "5432";
+
+// SSL is required for Azure PostgreSQL (set DB_SSL=false to disable for local dev)
+const useSSL = process.env.DB_SSL !== "false";
+
+// Build PostgreSQL connection string
+const connectionString =
+  process.env.DATABASE_URL ||
+  `postgresql://${process.env.DB_USER}:${process.env.DB_KEY}@${process.env.DB_SERVER}:${process.env.DB_PORT || defaultPort}/${process.env.DB_NAME}`;
+
+// Configure pool based on connection mode
+const poolConfig: PoolConfig = {
+  connectionString,
+  // Azure PostgreSQL requires SSL
+  ...(useSSL && {
+    ssl: { rejectUnauthorized: false },
+  }),
+  // PgBouncer in transaction mode requires max 1 connection per pool
+  ...(usePgBouncer && {
+    max: 1,
+  }),
 };
 
-const adapter = new PrismaMssql(dbConfig);
+const pool = new Pool(poolConfig);
+const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 const ACHIEVEMENTS = [

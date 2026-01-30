@@ -12,13 +12,12 @@
 		"test:watch": "pnpm with-env vitest"
 	},
 	"dependencies": {
-		"@chat-assistant/database": "workspace:*",
 		"@azure/communication-email": "^1.1.0",
+		"@chat-assistant/database": "workspace:*",
 		"@dnd-kit/core": "^6.3.1",
 		"@dnd-kit/modifiers": "^9.0.0",
 		"@dnd-kit/sortable": "^10.0.0",
 		"@dnd-kit/utilities": "^3.2.2",
-		"@prisma/adapter-mssql": "^7.2.0",
 		"@prisma/adapter-pg": "^6.18.0",
 		"@prisma/client": "catalog:",
 		"@prisma/client-runtime-utils": "7.2.0",
@@ -50,6 +49,7 @@
 		"lucide-react": "catalog:",
 		"next": "catalog:",
 		"next-themes": "catalog:",
+		"pg": "^8.17.2",
 		"prisma": "catalog:",
 		"react": "catalog:",
 		"react-dom": "catalog:",
@@ -64,6 +64,7 @@
 	"devDependencies": {
 		"@tailwindcss/postcss": "catalog:",
 		"@types/node": "catalog:",
+		"@types/pg": "^8.16.0",
 		"@types/react": "catalog:",
 		"@types/react-dom": "catalog:",
 		"@vitejs/plugin-react": "^5.1.2",
